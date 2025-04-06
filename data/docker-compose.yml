@@ -76,5 +76,4 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
 volumes:
-  database_volume:
   timescale_database_volume:

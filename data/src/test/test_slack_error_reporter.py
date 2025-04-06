@@ -6,8 +6,8 @@ from unittest.mock import patch
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 
 from new_etl.classes.slack_reporters import (
-    send_error_to_slack,
-)  # Ensure correct file import
+    send_error_to_slack,  # Ensure correct file import
+)
 
 
 class TestSlackNotifier(unittest.TestCase):
@@ -15,8 +15,7 @@ class TestSlackNotifier(unittest.TestCase):
         "new_etl.classes.slack_reporters.WebClient.chat_postMessage"
     )  # Correct patching
     @patch(
-        "new_etl.classes.slack_reporters.os.getenv",
-        return_value="mock_slack_token",
+        "new_etl.classes.slack_reporters.os.getenv", return_value="mock_slack_token"
     )  # Correct patching
     def test_send_error_to_slack(self, _mock_getenv, mock_slack_post):
         """Test that Slack error reporting is triggered correctly."""
