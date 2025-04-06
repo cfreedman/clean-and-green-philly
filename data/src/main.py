@@ -3,7 +3,10 @@ import traceback
 
 import pandas as pd
 
+<<<<<<< HEAD
 from config.config import tiles_file_id_prefix
+=======
+>>>>>>> adam/1152-postgres-reload
 from config.psql import conn
 from new_etl.classes.data_diff import DiffReport
 from new_etl.classes.slack_reporters import (
@@ -40,6 +43,8 @@ from new_etl.data_utils import (
     unsafe_buildings,
     vacant_properties,
 )
+
+from config.config import tiles_file_id_prefix
 from new_etl.database import to_postgis_with_schema
 
 # Ensure the directory containing awkde is in the Python path
