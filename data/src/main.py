@@ -1,5 +1,7 @@
 import sys
 import traceback
+import os
+import shutil
 
 import pandas as pd
 
@@ -47,6 +49,14 @@ awkde_path = "/usr/src/app"
 if awkde_path not in sys.path:
     sys.path.append(awkde_path)
 
+# Create new tmp directory to save raster file and various other temporary files for the ETL process
+current_dir = os.path.dirname(os.path.abspath(__file__))
+temp_dir = os.path.join(current_dir, "tmp")
+# Clear any temp directory from old runs
+if os.path.exists(temp_dir):
+    shutil.rmtree(temp_dir)
+os.mkdir(temp_dir)
+
 
 try:
     print("Starting ETL process.")
@@ -75,7 +85,7 @@ try:
         negligent_devs,
         tactical_urbanism,
         conservatorship,
-        park_priority,
+        # park_priority,
     ]
 
     print("Loading OPA properties dataset.")
