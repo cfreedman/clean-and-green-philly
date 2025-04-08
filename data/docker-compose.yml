@@ -75,14 +75,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
     extra_hosts:
       - host.docker.internal:host-gateway
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: cagp-pgadmin
-    ports:
-      - '8888:80'
-    environment:
-      PGADMIN_DEFAULT_EMAIL: collum@gmail.com
-      PGADMIN_DEFAULT_PASSWORD: password
 
 volumes:
   timescale_database_volume:

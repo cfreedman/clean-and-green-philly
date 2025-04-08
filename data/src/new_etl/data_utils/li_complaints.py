@@ -33,5 +33,5 @@ def li_complaints(primary_featurelayer: FeatureLayer) -> FeatureLayer:
 
     """
     return apply_kde_to_primary(
-        primary_featurelayer, "L and I Complaints", COMPLAINTS_SQL_QUERY
+        primary_featurelayer, name="L and I Complaints", query=COMPLAINTS_SQL_QUERY
     )

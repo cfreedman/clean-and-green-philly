@@ -8,6 +8,7 @@ from config.config import USE_CRS
 from ..classes.featurelayer import FeatureLayer
 from ..constants.services import CENSUS_BGS_URL, PERMITS_QUERY
 from ..metadata.metadata_utils import provide_metadata
+from ..data_utils.kde import apply_kde_to_primary
 
 
 @provide_metadata()
@@ -67,17 +68,21 @@ def dev_probability(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     census_bgs_gdf["permit_count"] = census_bgs_gdf.index.map(permit_counts)
     census_bgs_gdf["permit_count"] = census_bgs_gdf["permit_count"].fillna(0)
 
-    # Classify development probability using Jenks natural breaks
-    breaks = jenkspy.jenks_breaks(census_bgs_gdf["permit_count"], n_classes=3)
-    census_bgs_gdf["dev_rank"] = pd.cut(
-        census_bgs_gdf["permit_count"], bins=breaks, labels=["Low", "Medium", "High"]
-    ).astype(str)
+    primary_featurelayer = apply_kde_to_primary(
+        primary_featurelayer, name="permit_count", input_gdf=census_bgs_gdf
+    )
+
+    # # Classify development probability using Jenks natural breaks
+    # breaks = jenkspy.jenks_breaks(census_bgs_gdf["permit_count"], n_classes=3)
+    # census_bgs_gdf["dev_rank"] = pd.cut(
+    #     census_bgs_gdf["permit_count"], bins=breaks, labels=["Low", "Medium", "High"]
+    # ).astype(str)
 
     updated_census_bgs = FeatureLayer(
         name="Updated Census Block Groups",
-        gdf=census_bgs_gdf[["permit_count", "dev_rank", "geometry"]],
+        gdf=census_bgs_gdf[["permit_count", "geometry"]],
         use_wkb_geom_field="geometry",
-        cols=["permit_count", "dev_rank"],
+        cols=["permit_count"],
     )
 
     updated_census_bgs.gdf = updated_census_bgs.gdf.to_crs(USE_CRS)

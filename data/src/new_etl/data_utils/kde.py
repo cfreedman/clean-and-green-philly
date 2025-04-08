@@ -1,6 +1,7 @@
 from typing import Tuple
 import numpy as np
 import rasterio
+from geopandas import GeoDataFrame
 from awkde.awkde import GaussianKDE
 from ..classes.featurelayer import FeatureLayer
 from config.config import USE_CRS
@@ -28,7 +29,11 @@ def kde_predict_chunk(kde: GaussianKDE, chunk: np.ndarray) -> np.ndarray:
 
 
 def generic_kde(
-    name: str, query: str, resolution: int = resolution, batch_size: int = batch_size
+    name: str,
+    query: str = None,
+    input_gdf: GeoDataFrame = None,
+    resolution: int = resolution,
+    batch_size: int = batch_size,
 ) -> Tuple[str, np.ndarray]:
     """
     Generates a raster file and grid points from kernel density estimation (KDE) for a dataset.
@@ -36,19 +41,36 @@ def generic_kde(
     Args:
         name (str): Name of the dataset being processed.
         query (str): SQL query to fetch data.
+        intpu_gdf (GeoDataFrame): Input dataframe containing geometry.
         resolution (int): Resolution for the grid. Defaults to 1320.
         batch_size (int): Batch size for processing grid points. Defaults to 100000.
 
     Returns:
         Tuple[str, np.ndarray]: The raster filename and the array of input points.
     """
-    print(f"Initializing FeatureLayer for {name}")
+    if query is None and input_gdf is None:
+        raise ValueError("Either 'query' or 'input_gdf' must be provided.")
+    if query is not None and input_gdf is not None:
+        raise ValueError("Only one of 'query' or 'input_gdf' should be provided.")
 
-    feature_layer = FeatureLayer(name=name, carto_sql_queries=query)
+    if query is not None:
+        print(f"Initializing FeatureLayer for {name}")
 
-    coords = np.array([geom.xy for geom in feature_layer.gdf.geometry])
-    x, y = coords[:, 0, :].flatten(), coords[:, 1, :].flatten()
-    X = np.column_stack((x, y))
+        feature_layer = FeatureLayer(name=name, carto_sql_queries=query)
+        input_geometry = feature_layer.gdf.geometry
+    else:
+        input_geometry = input_gdf.geometry
+
+    coords = []
+    for geom in input_geometry:
+        if geom.geom_type == "Point":
+            coords.append([geom.x, geom.y])
+        else:
+            geom_coords = geom.exterior.coords
+            coords.extend([[x, y] for x, y in geom_coords])
+
+    X = np.array(coords)
+    x, y = X[:, 0].reshape(-1), X[:, 1].reshape(-1)
 
     x_grid, y_grid = (
         np.linspace(x.min(), x.max(), resolution),
@@ -112,7 +134,8 @@ def generic_kde(
 def apply_kde_to_primary(
     primary_featurelayer: FeatureLayer,
     name: str,
-    query: str,
+    query: str = None,
+    input_gdf: GeoDataFrame = None,
     resolution: int = resolution,
 ) -> FeatureLayer:
     """
@@ -128,7 +151,7 @@ def apply_kde_to_primary(
     Returns:
         FeatureLayer: The input feature layer with added KDE-related columns.
     """
-    raster_filename, crime_coords = generic_kde(name, query, resolution)
+    raster_filename, crime_coords = generic_kde(name, query, input_gdf, resolution)
 
     primary_featurelayer.gdf["centroid"] = primary_featurelayer.gdf.geometry.centroid
 

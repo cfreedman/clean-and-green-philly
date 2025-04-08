@@ -33,5 +33,5 @@ def drug_crimes(primary_featurelayer: FeatureLayer) -> FeatureLayer:
 
     """
     return apply_kde_to_primary(
-        primary_featurelayer, "Drug Crimes", DRUGCRIME_SQL_QUERY
+        primary_featurelayer, name="Drug Crimes", query=DRUGCRIME_SQL_QUERY
     )

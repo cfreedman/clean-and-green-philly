@@ -31,4 +31,6 @@ def gun_crimes(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     Source:
         https://phl.carto.com/api/v2/sql
     """
-    return apply_kde_to_primary(primary_featurelayer, "Gun Crimes", GUNCRIME_SQL_QUERY)
+    return apply_kde_to_primary(
+        primary_featurelayer, name="Gun Crimes", query=GUNCRIME_SQL_QUERY
+    )
