@@ -5,6 +5,7 @@ from typing import List, Union
 
 import geopandas as gpd
 import pyogrio
+import fiona
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
@@ -51,30 +52,41 @@ def download_and_process_shapefile(
     Returns:
         gpd.GeoDataFrame: GeoDataFrame containing the processed park data.
     """
-    print("Downloading and processing park priority data...")
-    response: requests.Response = requests.get(park_url, stream=True)
-    total_size: int = int(response.headers.get("content-length", 0))
+    if any([not os.path.exists(f"tmp/{filename}") for filename in target_files]):
+        print("Downloading and processing park priority data...")
+        response: requests.Response = requests.get(park_url, stream=True)
+        total_size: int = int(response.headers.get("content-length", 0))
 
-    with tqdm(
-        total=total_size, unit="iB", unit_scale=True, desc="Downloading"
-    ) as progress_bar:
-        buffer: BytesIO = BytesIO()
-        for data in response.iter_content(1024):
-            size: int = buffer.write(data)
-            progress_bar.update(size)
+        with tqdm(
+            total=total_size, unit="iB", unit_scale=True, desc="Downloading"
+        ) as progress_bar:
+            buffer: BytesIO = BytesIO()
+            for data in response.iter_content(1024):
+                size: int = buffer.write(data)
+                progress_bar.update(size)
 
-    with zipfile.ZipFile(buffer) as zip_ref:
-        for file_name in tqdm(target_files, desc="Extracting"):
-            zip_ref.extract(file_name, "tmp/")
+        with zipfile.ZipFile(buffer) as zip_ref:
+            for file_name in tqdm(target_files, desc="Extracting"):
+                zip_ref.extract(file_name, "tmp/")
+    else:
+        print("Parks data already located in filesystem - proceeding")
 
     print("Processing shapefile...")
-    pa_parks: gpd.GeoDataFrame = gpd.read_file(
-        "tmp/" + file_name_prefix + "_ParkPriorityAreas.shp"
-    )
-    pa_parks = pa_parks.to_crs(USE_CRS)
 
-    phl_parks: gpd.GeoDataFrame = pa_parks[pa_parks["ID"].str.startswith("42101")]
-    phl_parks = phl_parks.loc[:, ["ParkNeed", "geometry"]]
+    def filter_shapefile_generator():
+        with fiona.open("tmp/" + file_name_prefix + "_ParkPriorityAreas.shp") as source:
+            for feature in source:
+                if not feature["properties"]["ID"].startswith("42101"):
+                    continue
+                filtered_feature = feature
+                filtered_feature['properties'] = {column: value for column, value in feature["properties"].items() if column in ["ParkNeed"]}
+                yield filtered_feature
+    
+    phl_parks: gpd.GeoDataFrame = gpd.GeoDataFrame.from_features(filter_shapefile_generator())
+
+    # Because we are only reading in the shapefile we need to be initialize and then project to the correct coordinate system
+    phl_parks.crs = USE_CRS
+    phl_parks = phl_parks.to_crs(USE_CRS)
 
     if isinstance(phl_parks, gpd.GeoDataFrame):
         phl_parks.rename(columns={"ParkNeed": "park_priority"}, inplace=True)

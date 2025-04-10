@@ -23,8 +23,6 @@ from config.config import (
     write_production_tiles_file,
 )
 from config.psql import conn, local_engine
-from new_etl.database import to_postgis_with_schema
-from new_etl.loaders import load_carto_data, load_esri_data
 
 log.basicConfig(level=log_level)
 

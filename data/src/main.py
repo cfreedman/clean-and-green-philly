@@ -1,7 +1,6 @@
 import sys
 import traceback
 import os
-import shutil
 
 import pandas as pd
 
@@ -53,9 +52,10 @@ if awkde_path not in sys.path:
 current_dir = os.path.dirname(os.path.abspath(__file__))
 temp_dir = os.path.join(current_dir, "tmp")
 # Clear any temp directory from old runs
-if os.path.exists(temp_dir):
-    shutil.rmtree(temp_dir)
-os.mkdir(temp_dir)
+# if os.path.exists(temp_dir):
+#     shutil.rmtree(temp_dir)
+if not os.path.exists(temp_dir):
+    os.mkdir(temp_dir)
 
 
 try:
@@ -85,7 +85,7 @@ try:
         negligent_devs,
         tactical_urbanism,
         conservatorship,
-        # park_priority,
+        park_priority,
     ]
 
     print("Loading OPA properties dataset.")
