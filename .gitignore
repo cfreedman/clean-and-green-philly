@@ -63,3 +63,10 @@ data/src/app/service-account-key.json
 # awkde build files
 data/src/awkde/build/
 tmp/
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
