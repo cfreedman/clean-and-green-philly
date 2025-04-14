@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-from config.config import USE_CRS
+from config.config import TARGET_CRS
 
 from ..classes.featurelayer import FeatureLayer
 from ..metadata.metadata_utils import provide_metadata
@@ -71,7 +71,7 @@ def download_and_process_shapefile(
     pa_parks: gpd.GeoDataFrame = gpd.read_file(
         "tmp/" + file_name_prefix + "_ParkPriorityAreas.shp"
     )
-    pa_parks = pa_parks.to_crs(USE_CRS)
+    pa_parks = pa_parks.to_crs(TARGET_CRS)
 
     phl_parks: gpd.GeoDataFrame = pa_parks[pa_parks["ID"].str.startswith("42101")]
     phl_parks = phl_parks.loc[:, ["ParkNeed", "geometry"]]

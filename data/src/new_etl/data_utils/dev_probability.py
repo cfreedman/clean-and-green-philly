@@ -3,7 +3,7 @@ import jenkspy
 import pandas as pd
 import requests
 
-from config.config import USE_CRS
+from config.config import TARGET_CRS
 
 from ..classes.featurelayer import FeatureLayer
 from ..constants.services import CENSUS_BGS_URL, PERMITS_QUERY
@@ -38,7 +38,7 @@ def dev_probability(primary_featurelayer: FeatureLayer) -> FeatureLayer:
         https://phl.carto.com/api/v2/sql
     """
     census_bgs_gdf = gpd.read_file(CENSUS_BGS_URL)
-    census_bgs_gdf = census_bgs_gdf.to_crs(USE_CRS)
+    census_bgs_gdf = census_bgs_gdf.to_crs(TARGET_CRS)
 
     base_url = "https://phl.carto.com/api/v2/sql"
     response = requests.get(f"{base_url}?q={PERMITS_QUERY}&format=GeoJSON")
@@ -59,7 +59,7 @@ def dev_probability(primary_featurelayer: FeatureLayer) -> FeatureLayer:
         )
         return primary_featurelayer
 
-    permits_gdf = permits_gdf.to_crs(USE_CRS)
+    permits_gdf = permits_gdf.to_crs(TARGET_CRS)
 
     joined_gdf = gpd.sjoin(permits_gdf, census_bgs_gdf, how="inner", predicate="within")
 
@@ -80,7 +80,7 @@ def dev_probability(primary_featurelayer: FeatureLayer) -> FeatureLayer:
         cols=["permit_count", "dev_rank"],
     )
 
-    updated_census_bgs.gdf = updated_census_bgs.gdf.to_crs(USE_CRS)
+    updated_census_bgs.gdf = updated_census_bgs.gdf.to_crs(TARGET_CRS)
 
     primary_featurelayer.spatial_join(updated_census_bgs)
 

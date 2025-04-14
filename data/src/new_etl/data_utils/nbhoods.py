@@ -1,6 +1,6 @@
 import geopandas as gpd
 
-from config.config import USE_CRS
+from config.config import TARGET_CRS
 
 from ..classes.featurelayer import FeatureLayer
 from ..constants.services import NBHOODS_URL
@@ -38,7 +38,7 @@ def nbhoods(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     if "MAPNAME" in phl_nbhoods.columns:
         phl_nbhoods.rename(columns={"MAPNAME": "neighborhood"}, inplace=True)
 
-    phl_nbhoods = phl_nbhoods.to_crs(USE_CRS)
+    phl_nbhoods = phl_nbhoods.to_crs(TARGET_CRS)
 
     nbhoods = FeatureLayer("Neighborhoods")
     nbhoods.gdf = phl_nbhoods

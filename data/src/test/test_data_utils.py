@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, Mock, patch
 import geopandas as gpd
 from shapely.geometry import Point
 
-from config.config import USE_CRS
+from config.config import TARGET_CRS
 from new_etl.data_utils.park_priority import get_latest_shapefile_url, park_priority
 
 
@@ -135,7 +135,7 @@ class TestDataUtils(unittest.TestCase):
                     Point(2, 2),
                 ],  # Use actual Point geometries
             },
-            crs=USE_CRS,  # Assign the expected CRS
+            crs=TARGET_CRS,  # Assign the expected CRS
         )
 
         mock_read_file.return_value = mock_gdf  # Return the mock GeoDataFrame

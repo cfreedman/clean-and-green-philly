@@ -1,4 +1,4 @@
-from config.config import USE_CRS
+from config.config import TARGET_CRS
 
 from ..classes.featurelayer import FeatureLayer
 from ..constants.services import COMMUNITY_GARDENS_TO_LOAD
@@ -40,11 +40,11 @@ def community_gardens(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     )
 
     # Ensure both layers are in the same CRS
-    if community_gardens.gdf.crs != USE_CRS:
+    if community_gardens.gdf.crs != TARGET_CRS:
         print(
-            f"Transforming community gardens from {community_gardens.gdf.crs} to {USE_CRS}"
+            f"Transforming community gardens from {community_gardens.gdf.crs} to {TARGET_CRS}"
         )
-        community_gardens.gdf = community_gardens.gdf.to_crs(USE_CRS)
+        community_gardens.gdf = community_gardens.gdf.to_crs(TARGET_CRS)
 
     # Identify problematic gardens
     geom_types = community_gardens.gdf.geometry.geom_type.value_counts()

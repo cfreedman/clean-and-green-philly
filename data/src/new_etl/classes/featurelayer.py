@@ -2,28 +2,29 @@ import logging as log
 import os
 import subprocess
 import traceback
+from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from abc import ABC
+from typing import List
 
 import geopandas as gpd
 import pandas as pd
 import requests
 import sqlalchemy as sa
+from esridump.dumper import EsriDumper
 from google.cloud import storage
-from new_etl.classes.bucket_manager import GCSBucketManager
-from new_etl.database import to_postgis_with_schema
-from new_etl.loaders import load_carto_data, load_esri_data
 from shapely import wkb
 from tqdm import tqdm
 
 from config.config import (
     FORCE_RELOAD,
-    USE_CRS,
+    INPUT_CRS,
+    TARGET_CRS,
     log_level,
     min_tiles_file_size_in_bytes,
     write_production_tiles_file,
 )
 from config.psql import conn, local_engine
+from new_etl.classes.bucket_manager import GCSBucketManager
 from new_etl.database import to_postgis_with_schema
 from new_etl.loaders import load_carto_data, load_esri_data
 
@@ -52,7 +53,7 @@ class FeatureLayer:
         esri_rest_urls=None,
         carto_sql_queries=None,
         gdf=None,
-        crs=USE_CRS,
+        crs=TARGET_CRS,
         force_reload=FORCE_RELOAD,
         from_xy=False,
         use_wkb_geom_field=None,
@@ -78,7 +79,7 @@ class FeatureLayer:
         self.crs = crs
         self.cols = cols
         self.psql_table = name.lower().replace(" ", "_")
-        self.input_crs = "EPSG:4326" if not from_xy else USE_CRS
+        self.input_crs = "EPSG:4326" if not from_xy else TARGET_CRS
         self.use_wkb_geom_field = use_wkb_geom_field
         self.max_workers = max_workers
         self.chunk_size = chunk_size
@@ -378,12 +379,21 @@ class FeatureLayer:
             except Exception as e:
                 print(f"PMTiles upload failed for {file}: {e}")
 
+
 class Loader(ABC):
     """
     Abstract base class for loading data.
     """
 
-    def __init__(self, name: str, cols: List[str] = None, load_on_init: bool = True, cacher = Cacher):
+    def __init__(
+        self,
+        name: str,
+        cols: List[str] = None,
+        load_on_init: bool = True,
+        cacher=None,
+        input_crs: str = INPUT_CRS,
+        target_crs: str = TARGET_CRS,
+    ):
         self.name = name
         self.cacher = cacher
         self.cols = cols
@@ -393,17 +403,18 @@ class Loader(ABC):
                 self.gdf = self.load_or_fetch()
             except Exception as e:
                 log.error(f"Error loading data for {self.name}: {e}")
-                self.gdf = gpd.GeoDataFrame() # Reset to an empty GeoDataFrame
+                self.gdf = gpd.GeoDataFrame()  # Reset to an empty GeoDataFrame
                 raise
-    
+
     def load_or_fetch(self) -> gpd.GeoDataFrame:
+        pass
 
     @abstractmethod
     def load_data(self):
         pass
 
     @staticmethod
-    def lowercase_column_names(gdf: gdpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    def lowercase_column_names(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         if not gdf.empty:
             gdf.columns = [col.lower() for col in gdf.columns]
         return gdf
@@ -428,28 +439,30 @@ class Loader(ABC):
         gdf = cls.filter_columns(gdf, cols)
         return gdf
 
-    
+    def use_coordinates(self, crs: str = TARGET_CRS):
+        self.gdf = gpd.GeoDataFrame(self.gdf, geometry="geometry", crs=crs)
+
 
 class GdfLoader(Loader):
     """
     Loader for a supplied GeoDataFrame.
     """
 
-    def __init__(self, name, gdf: gdf.GeoDataFrame | None = None):
+    def __init__(self, name: str, gdf: gpd.GeoDataFrame | None = None):
         self.gdf = gdf
         super().__init__(name)
 
-    def load_data(self):
+    def load_data(self, input_file: str):
         # Implement logic for loading for GeoDataFrame
-    
-class EsriLoader(Loader):
+        self.gdf = gpd.read_file(input_file)
 
-    def __init__(self, esri_urls: List[str]):
+
+class EsriLoader(Loader):
+    def __init__(self, name: str, esri_urls: List[str]):
         self.esri_urls = esri_urls
         super().__init__(name)
 
     def load_data(self):
-
         gdfs = []
 
         for url in self.esri_urls:
@@ -469,42 +482,81 @@ class EsriLoader(Loader):
                 continue  # Skip if no features were found
 
             geojson_features = {"type": "FeatureCollection", "features": features}
-            gdf = gpd.GeoDataFrame.from_features(geojson_features, crs=input_crs).to_crs(
-                target_crs
-            )
+            gdf = gpd.GeoDataFrame.from_features(
+                geojson_features, crs=self.input_crs
+            ).to_crs(self.target_crs)
 
             if parcel_type:
                 gdf["parcel_type"] = parcel_type
             gdfs.append(gdf)
-        
+
         self.gdf = pd.concat(gdfs, ignore_index=True)
 
-class CartoLoader(Loader):
 
-    def __init__(self, queries: List[str]):
+class CartoLoader(Loader):
+    def __init__(
+        self,
+        name: str,
+        queries: List[str],
+        chunk_size: int = 100000,
+        use_wkb_geom_field: str | None = None,
+    ):
         self.queries = queries
+        self.chunk_size = chunk_size
+        self.use_wkb_geom_field = use_wkb_geom_field
         super().__init__(name)
 
     def load_data(self):
-
         gdfs = []
         with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
             futures = []
             for query in self.queries:
-                for blank in blank:
+                total_rows = CartoLoader.get_carto_total_rows(query)
+                for offset in range(0, total_rows, self.chunk_size):
                     futures.append(
                         executor.submit(
-                            fetch_carto_chunk,
+                            CartoLoader.fetch_carto_chunk,
                             query,
                             offset,
-                            chunk_size,
-                            use_wkb_geom_field,
-                            input_crs,
-                            target_crs,
+                            self.chunk_size,
+                            self.use_wkb_geom_field,
+                            self.input_crs,
+                            self.target_crs,
                         )
                     )
 
-
         self.gdf = pd.concat(gdfs, ignore_index=True)
 
+    @staticmethod
+    def fetch_carto_chunk(
+        query: str,
+        offset: int,
+        chunk_size: int,
+        use_wkb_geom_field,
+        input_crs,
+        target_crs,
+    ) -> gpd.GeoDataFrame:
+        chunk_query = f"{query} LIMIT {chunk_size} OFFSET {offset}"
+        response = requests.get(
+            "https://phl.carto.com/api/v2/sql", params={"q": chunk_query}
+        )
+        response.raise_for_status()
+        data = response.json().get("rows", [])
+        if not data:
+            return gpd.GeoDataFrame()
+        df = pd.DataFrame(data)
+        geometry = (
+            wkb.loads(df[use_wkb_geom_field], hex=True)
+            if use_wkb_geom_field
+            else gpd.points_from_xy(df.x, df.y)
+        )
+        return gpd.GeoDataFrame(df, geometry=geometry, crs=input_crs).to_crs(target_crs)
 
+    @staticmethod
+    def get_carto_total_rows(query: str) -> int:
+        count_query = f"SELECT COUNT(*) as count FROM ({query}) as subquery"
+        response = requests.get(
+            "https://phl.carto.com/api/v2/sql", params={"q": count_query}
+        )
+        response.raise_for_status()
+        return response.json()["rows"][0]["count"]

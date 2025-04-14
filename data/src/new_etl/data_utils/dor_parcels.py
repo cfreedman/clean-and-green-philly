@@ -1,8 +1,10 @@
+import geopandas as gpd
+from shapely.strtree import STRtree
+
+from config.config import TARGET_CRS
+
 from ..classes.featurelayer import FeatureLayer
 from ..constants.services import DOR_PARCELS_URL
-import geopandas as gpd
-from config.config import USE_CRS
-from shapely.strtree import STRtree
 
 
 def dor_parcels(primary_featurelayer: FeatureLayer) -> FeatureLayer:
@@ -20,7 +22,7 @@ def dor_parcels(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     print("Loading DOR properties from GeoJSON...")
 
     # Load and preprocess DOR parcels
-    dor_parcels = gpd.read_file(DOR_PARCELS_URL).to_crs(USE_CRS)
+    dor_parcels = gpd.read_file(DOR_PARCELS_URL).to_crs(TARGET_CRS)
     dor_parcels["geometry"] = dor_parcels["geometry"].make_valid()
     dor_parcels = dor_parcels[
         dor_parcels["STATUS"] == 1
@@ -35,7 +37,7 @@ def dor_parcels(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     )
 
     # Ensure the primary feature layer has the same CRS
-    primary_featurelayer.gdf = primary_featurelayer.gdf.to_crs(USE_CRS)
+    primary_featurelayer.gdf = primary_featurelayer.gdf.to_crs(TARGET_CRS)
 
     # Perform spatial join to identify intersecting polygons
     print("Performing spatial join between points and polygons...")
@@ -57,7 +59,7 @@ def dor_parcels(primary_featurelayer: FeatureLayer) -> FeatureLayer:
 
     # Update primary feature layer
     primary_featurelayer.gdf = gpd.GeoDataFrame(
-        spatial_join_result, geometry="geometry", crs=USE_CRS
+        spatial_join_result, geometry="geometry", crs=TARGET_CRS
     )
 
     # Count match statistics

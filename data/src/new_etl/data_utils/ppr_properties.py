@@ -3,7 +3,7 @@ import io
 import geopandas as gpd
 import requests
 
-from config.config import USE_CRS
+from config.config import TARGET_CRS
 
 from ..classes.featurelayer import FeatureLayer
 from ..constants.services import PPR_PROPERTIES_TO_LOAD
@@ -70,7 +70,7 @@ def ppr_properties(primary_featurelayer: FeatureLayer) -> FeatureLayer:
 
     # Limit PPR properties to relevant columns and apply CRS
     ppr_properties.gdf = ppr_properties.gdf[["public_name", "geometry"]]
-    ppr_properties.gdf = ppr_properties.gdf.to_crs(USE_CRS)
+    ppr_properties.gdf = ppr_properties.gdf.to_crs(TARGET_CRS)
 
     # Perform a spatial join with the primary feature layer
     primary_featurelayer.spatial_join(ppr_properties)
