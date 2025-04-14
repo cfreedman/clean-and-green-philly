@@ -3,7 +3,7 @@ from io import BytesIO
 import geopandas as gpd
 import pandas as pd
 
-from ..classes.featurelayer import FeatureLayer, google_cloud_bucket
+from ..classes.featurelayer import EsriLoader, FeatureLayer, google_cloud_bucket
 from ..constants.services import VACANT_PROPS_LAYERS_TO_LOAD
 from ..metadata.metadata_utils import provide_metadata
 
@@ -83,7 +83,8 @@ def vacant_properties(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     Known Issues:
         - The vacant land data is below the threshold, so backup data is loaded from GCS.
     """
-    vacant_properties = FeatureLayer(
+
+    vacant_properties = EsriLoader(
         name="Vacant Properties",
         esri_rest_urls=VACANT_PROPS_LAYERS_TO_LOAD,
         cols=["OPA_ID", "parcel_type"],  # Only need opa_id and parcel_type
@@ -127,7 +128,7 @@ def vacant_properties(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     df.dropna(subset=["opa_id"], inplace=True)
 
     # Final check for null percentages
-    # check_null_percentage(df)
+    check_null_percentage(df)
 
     # Add "vacant" column to primary feature layer
     primary_featurelayer.gdf["vacant"] = primary_featurelayer.gdf["opa_id"].isin(

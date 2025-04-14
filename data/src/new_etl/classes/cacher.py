@@ -1,7 +1,7 @@
 import os
 from enum import Enum
 
-import geopandas as gpd
+from featurelayer import Loader
 
 
 class RunMode(Enum):
@@ -11,17 +11,15 @@ class RunMode(Enum):
 
 
 class Cacher:
-    def __init__(self, run_mode: RunMode):
+    def __init__(self, run_mode: RunMode, cache_dir: str):
         self.run_mode = run_mode
+        self.cache_dir = cache_dir
 
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        temp_dir = os.path.join(current_dir, "tmp")
+    def load_cached_file(self, filename: str):
+        filepath = os.path.join(self.cache_dir, filename)
+        if not os.path.exists(filepath):
+            raise Exception("File does not exist in cache")
 
-        self.cache_dir = temp_dir
-
-    def get_cache_file(self, name: str, mode: RunMode) -> str:
-        filepath = os.path.join(self.cache_dir, name)
-        return filepath
-
-    def load_cache(self, name: str) -> gpd.GeoDataFrame:
-        return gpd.read_file(self.get_cache_file(name))
+    def save_to_cache(self, data: Loader):
+        filepath = os.path.join(self.cache_dir, data.altered_name)
+        data.gdf.to_parquet(filepath)

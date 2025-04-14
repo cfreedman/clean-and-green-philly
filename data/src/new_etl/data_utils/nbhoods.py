@@ -1,8 +1,4 @@
-import geopandas as gpd
-
-from config.config import TARGET_CRS
-
-from ..classes.featurelayer import FeatureLayer
+from ..classes.featurelayer import FeatureLayer, GdfLoader
 from ..constants.services import NBHOODS_URL
 from ..metadata.metadata_utils import provide_metadata
 
@@ -32,16 +28,18 @@ def nbhoods(primary_featurelayer: FeatureLayer) -> FeatureLayer:
     Source:
         https://raw.githubusercontent.com/opendataphilly/open-geo-data/master/philadelphia-neighborhoods/philadelphia-neighborhoods.geojson
     """
-    phl_nbhoods = gpd.read_file(NBHOODS_URL)
+    # phl_nbhoods = gpd.read_file(NBHOODS_URL)
+    phl_nbhoods = GdfLoader(name="Neighborhoods")
+    phl_nbhoods.load_data(NBHOODS_URL)
 
     # Correct the column name to lowercase if needed
     if "MAPNAME" in phl_nbhoods.columns:
         phl_nbhoods.rename(columns={"MAPNAME": "neighborhood"}, inplace=True)
 
-    phl_nbhoods = phl_nbhoods.to_crs(TARGET_CRS)
+    # phl_nbhoods = phl_nbhoods.to_crs(TARGET_CRS)
 
-    nbhoods = FeatureLayer("Neighborhoods")
-    nbhoods.gdf = phl_nbhoods
+    # nbhoods = FeatureLayer("Neighborhoods")
+    # nbhoods.gdf = phl_nbhoods
 
     red_cols_to_keep = ["neighborhood", "geometry"]
     nbhoods.gdf = nbhoods.gdf[red_cols_to_keep]

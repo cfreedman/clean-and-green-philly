@@ -1,9 +1,10 @@
 import re
 
 import pandas as pd
+
 from new_etl.metadata.metadata_utils import provide_metadata
 
-from ..classes.featurelayer import FeatureLayer
+from ..classes.featurelayer import CartoLoader, FeatureLayer
 from ..constants.services import OPA_PROPERTIES_QUERY
 
 replacements = {
@@ -106,7 +107,7 @@ def opa_properties() -> FeatureLayer:
     Tagline:
         Load OPA data
     """
-    opa = FeatureLayer(
+    opa = CartoLoader(
         name="OPA Properties",
         carto_sql_queries=OPA_PROPERTIES_QUERY,
         use_wkb_geom_field="the_geom",

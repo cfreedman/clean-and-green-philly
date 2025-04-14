@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ..classes.featurelayer import FeatureLayer
+from ..classes.featurelayer import EsriLoader, FeatureLayer
 from ..constants.services import COUNCIL_DISTRICTS_TO_LOAD
 from ..metadata.metadata_utils import provide_metadata
 
@@ -30,7 +30,7 @@ def council_dists(primary_featurelayer: FeatureLayer) -> FeatureLayer:
         opa_id, geometry
     """
     # Load council districts
-    council_dists = FeatureLayer(
+    council_dists = EsriLoader(
         name="Council Districts", esri_rest_urls=COUNCIL_DISTRICTS_TO_LOAD
     )
 

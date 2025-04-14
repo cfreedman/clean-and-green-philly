@@ -1,6 +1,6 @@
 import geopandas as gpd
 
-from ..classes.featurelayer import FeatureLayer
+from ..classes.featurelayer import CartoLoader, FeatureLayer
 from ..constants.services import PWD_PARCELS_QUERY
 from ..metadata.metadata_utils import provide_metadata
 
@@ -32,7 +32,7 @@ def pwd_parcels(primary_featurelayer: FeatureLayer) -> FeatureLayer:
         https://phl.carto.com/api/v2/sql
     """
     # Load PWD parcels
-    pwd_parcels = FeatureLayer(
+    pwd_parcels = CartoLoader(
         name="PWD Parcels",
         carto_sql_queries=PWD_PARCELS_QUERY,
         use_wkb_geom_field="the_geom",

@@ -393,10 +393,17 @@ class Loader(ABC):
         cacher=None,
         input_crs: str = INPUT_CRS,
         target_crs: str = TARGET_CRS,
+        collected_metadata=None,
     ):
         self.name = name
+        self.altered_name = name.lower().replace(" ", "_")
         self.cacher = cacher
         self.cols = cols
+
+        if collected_metadata is None:
+            self.collected_metadata = []
+        else:
+            self.collected_metadata = collected_metadata
 
         if load_on_init:
             try:
