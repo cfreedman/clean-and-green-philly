@@ -3,6 +3,7 @@ import os
 import subprocess
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from abc import ABC
 
 import geopandas as gpd
 import pandas as pd
@@ -376,3 +377,134 @@ class FeatureLayer:
                 print(f"PMTiles upload successful for {file}!")
             except Exception as e:
                 print(f"PMTiles upload failed for {file}: {e}")
+
+class Loader(ABC):
+    """
+    Abstract base class for loading data.
+    """
+
+    def __init__(self, name: str, cols: List[str] = None, load_on_init: bool = True, cacher = Cacher):
+        self.name = name
+        self.cacher = cacher
+        self.cols = cols
+
+        if load_on_init:
+            try:
+                self.gdf = self.load_or_fetch()
+            except Exception as e:
+                log.error(f"Error loading data for {self.name}: {e}")
+                self.gdf = gpd.GeoDataFrame() # Reset to an empty GeoDataFrame
+                raise
+    
+    def load_or_fetch(self) -> gpd.GeoDataFrame:
+
+    @abstractmethod
+    def load_data(self):
+        pass
+
+    @staticmethod
+    def lowercase_column_names(gdf: gdpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        if not gdf.empty:
+            gdf.columns = [col.lower() for col in gdf.columns]
+        return gdf
+
+    @staticmethod
+    def filter_columns(gdf: gpd.GeoDataFrame, cols: List[str]) -> gpd.GeoDataFrame:
+        """
+        Filter the GeoDataFrame to include only the specified columns.
+        """
+        if cols:
+            cols = [col.lower() for col in cols]
+            cols.append("geometry")
+            gdf = gdf[[col for col in cols if col in gdf.columns]]
+        return gdf
+
+    @classmethod
+    def normalize_columns(cls, gdf: gpd.GeoDataFrame, cols: List[str]):
+        """
+        Normalize the column names of the GeoDataFrame to lowercase.
+        """
+        gdf = cls.lowercase_column_names(gdf)
+        gdf = cls.filter_columns(gdf, cols)
+        return gdf
+
+    
+
+class GdfLoader(Loader):
+    """
+    Loader for a supplied GeoDataFrame.
+    """
+
+    def __init__(self, name, gdf: gdf.GeoDataFrame | None = None):
+        self.gdf = gdf
+        super().__init__(name)
+
+    def load_data(self):
+        # Implement logic for loading for GeoDataFrame
+    
+class EsriLoader(Loader):
+
+    def __init__(self, esri_urls: List[str]):
+        self.esri_urls = esri_urls
+        super().__init__(name)
+
+    def load_data(self):
+
+        gdfs = []
+
+        for url in self.esri_urls:
+            # Determine parcel_type based on URL patterns
+            parcel_type = (
+                "Land"
+                if "Vacant_Indicators_Land" in url
+                else "Building"
+                if "Vacant_Indicators_Bldg" in url
+                else None
+            )
+
+            dumper = EsriDumper(url)
+            features = [feature for feature in dumper]
+
+            if not features:
+                continue  # Skip if no features were found
+
+            geojson_features = {"type": "FeatureCollection", "features": features}
+            gdf = gpd.GeoDataFrame.from_features(geojson_features, crs=input_crs).to_crs(
+                target_crs
+            )
+
+            if parcel_type:
+                gdf["parcel_type"] = parcel_type
+            gdfs.append(gdf)
+        
+        self.gdf = pd.concat(gdfs, ignore_index=True)
+
+class CartoLoader(Loader):
+
+    def __init__(self, queries: List[str]):
+        self.queries = queries
+        super().__init__(name)
+
+    def load_data(self):
+
+        gdfs = []
+        with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+            futures = []
+            for query in self.queries:
+                for blank in blank:
+                    futures.append(
+                        executor.submit(
+                            fetch_carto_chunk,
+                            query,
+                            offset,
+                            chunk_size,
+                            use_wkb_geom_field,
+                            input_crs,
+                            target_crs,
+                        )
+                    )
+
+
+        self.gdf = pd.concat(gdfs, ignore_index=True)
+
+
