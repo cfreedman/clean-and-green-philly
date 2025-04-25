@@ -79,10 +79,16 @@ def download_and_process_shapefile(
                 if not feature["properties"]["ID"].startswith("42101"):
                     continue
                 filtered_feature = feature
-                filtered_feature['properties'] = {column: value for column, value in feature["properties"].items() if column in ["ParkNeed"]}
+                filtered_feature["properties"] = {
+                    column: value
+                    for column, value in feature["properties"].items()
+                    if column in ["ParkNeed"]
+                }
                 yield filtered_feature
-    
-    phl_parks: gpd.GeoDataFrame = gpd.GeoDataFrame.from_features(filter_shapefile_generator())
+
+    phl_parks: gpd.GeoDataFrame = gpd.GeoDataFrame.from_features(
+        filter_shapefile_generator()
+    )
 
     # Because we are only reading in the shapefile we need to be initialize and then project to the correct coordinate system
     phl_parks.crs = USE_CRS
