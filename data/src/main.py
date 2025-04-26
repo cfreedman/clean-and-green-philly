@@ -31,7 +31,6 @@ from new_etl.data_utils import (
     negligent_devs,
     opa_properties,
     owner_type,
-    park_priority,
     phs_properties,
     ppr_properties,
     priority_level,

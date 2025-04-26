@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 FORCE_RELOAD = True
@@ -39,6 +40,9 @@ tile_file_backup_directory: str = "backup"
 min_tiles_file_size_in_bytes: int = 5 * 1024 * 1024
 """ The minimum file size in bytes of the final generated pm tiles file.  If the file is not at least this size, 
 don't upload to the GCP bucket as the file may be corrupted, e.g. a source vacant properties dataset was incomplete with not enough features."""
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIRECTORY = os.path.dirname(current_directory)
 
 
 def is_docker() -> bool:
